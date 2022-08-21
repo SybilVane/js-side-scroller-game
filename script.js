@@ -28,6 +28,22 @@ window.addEventListener('load', () => {
     }
   }
 
+  /*  
+TOP BOUNDARY OF SCREEN
+x = 0 
+
+BOTTOM BOUNDARY OF SCREEN
+y = canvas height - height of player
+gameHeight - this.height
+
+LEFT BOUNDARY OF SCREEN
+y = 0
+
+RIGHT BOUNDARY OF SCREEN
+x = canvas width - width of player
+gameWidth - this.width
+*/
+
   class Player {
     constructor(gameWidth, gameHeight) {
       this.gameWidth = gameWidth;
@@ -35,15 +51,16 @@ window.addEventListener('load', () => {
       this.width = 200;
       this.height = 200;
       this.x = 0;
-      this.y = 0;
+      this.y = gameHeight - this.height;
       this.image = document.getElementById('playerImage');
       this.frameX = 0;
       this.frameY = 0;
       this.speed = 0;
+      this.vy = 0;
+      this.weight = 1;
     }
 
     draw(context) {
-      context.fillStyle = 'white';
       context.fillRect(this.x, this.y, this.width, this.height);
       context.drawImage(
         this.image,
@@ -57,17 +74,33 @@ window.addEventListener('load', () => {
         this.height
       );
     }
-    update() {
-      this.x += this.speed;
-      input.keys.has('ArrowRight')
-        ? (this.speed = 5)
-        : input.keys.has('ArrowLeft')
-        ? (this.speed = -5)
-        : (this.speed = 0);
+    update(input) {
+      if (input.keys.has('ArrowRight')) this.speed = 5;
+      else if (input.keys.has('ArrowLeft')) this.speed = -5;
+      else if (input.keys.has('ArrowUp') && this.onGround()) this.vy -= 32;
+      else this.speed = 0;
 
-      if (this.x < 0) this.x = 0;
+      this.x += this.speed; // move player horizontally
+      if (this.x < 0) this.x = 0; // left boundary
       else if (this.x > this.gameWidth - this.width)
+        // right boundary
         this.x = this.gameWidth - this.width;
+
+      // vertical movement
+      this.y += this.vy; // jump
+      if (!this.onGround()) {
+        this.vy += this.weight; // if it's on ground then you can jump
+        this.frameY = 1; // set frame to jumping
+      } else {
+        this.vy = 0; // if it's not on ground then you can't jump
+        this.frameY = 0; // set frame to standing
+      }
+      if (this.y > this.gameHeight - this.height)
+        // bottom boundary
+        this.y = this.gameHeight - this.height;
+    }
+    onGround() {
+      return this.y >= this.gameHeight - this.height; // if it's on ground then return true
     }
   }
 
