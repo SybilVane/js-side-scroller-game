@@ -3,6 +3,7 @@ window.addEventListener('load', () => {
   const ctx = canvas.getContext('2d');
   canvas.width = 800;
   canvas.height = 720;
+  let enemies = [];
 
   class InputHandler {
     constructor() {
@@ -48,33 +49,44 @@ gameWidth - this.width
     constructor(gameWidth, gameHeight) {
       this.gameWidth = gameWidth;
       this.gameHeight = gameHeight;
-      this.width = 200;
-      this.height = 200;
-      this.x = 0;
-      this.y = gameHeight - this.height;
       this.image = document.getElementById('playerImage');
-      this.frameX = 0;
-      this.frameY = 0;
-      this.speed = 0;
-      this.vy = 0;
-      this.weight = 1;
+      this.width = 200; // width of player
+      this.height = 200; // height of player
+      this.x = 0; // x position of player
+      this.y = gameHeight - this.height; // y position of player
+      this.frameX = 0; // frame position from spritesheet horizontally
+      this.frameY = 0; // frame position from spritesheet vertically
+      this.maxFrame = 8; // maximum frame position from spritesheet horizontally
+      this.fps = 20; // frames per second
+      this.frameTimer = 0; // frame timer
+      this.frameInterval = 1000 / this.fps; // frame interval
+      this.speed = 0; // horizontal speed of player
+      this.vy = 0; // vertical speed of player
+      this.weight = 1; // weight of player
     }
 
     draw(context) {
-      context.fillRect(this.x, this.y, this.width, this.height);
       context.drawImage(
         this.image,
         this.frameX * this.width, // source x
         this.frameY * this.height, // source y
         this.width, // source width
         this.height, // source height
-        this.x,
-        this.y,
-        this.width,
-        this.height
+        this.x, // destination x
+        this.y, // destination y
+        this.width, // destination width
+        this.height // destination height
       );
     }
-    update(input) {
+    update(input, deltaTime) {
+      // sprite animation
+      if (this.frameTimer > this.frameInterval) {
+        if (this.frameX >= this.maxFrame) this.frameX = 0;
+        else this.frameX++;
+        this.frameTimer = 0;
+      } else this.frameTimer += deltaTime;
+
+      // controls
       if (input.keys.has('ArrowRight')) this.speed = 5;
       else if (input.keys.has('ArrowLeft')) this.speed = -5;
       else if (input.keys.has('ArrowUp') && this.onGround()) this.vy -= 32;
@@ -91,9 +103,11 @@ gameWidth - this.width
       if (!this.onGround()) {
         this.vy += this.weight; // if it's on ground then you can jump
         this.frameY = 1; // set frame to jumping
+        this.maxFrame = 5; // set max frame to jumping (fewer frames than running in the spritesheet)
       } else {
         this.vy = 0; // if it's not on ground then you can't jump
         this.frameY = 0; // set frame to standing
+        this.maxFrame = 8; // set max frame to running (more frames than jumping in the spritesheet)
       }
       if (this.y > this.gameHeight - this.height)
         // bottom boundary
@@ -104,23 +118,113 @@ gameWidth - this.width
     }
   }
 
-  class Background {}
+  class Background {
+    constructor(gameWidth, gameHeight) {
+      this.gameWidth = gameWidth;
+      this.gameHeight = gameHeight;
+      this.image = document.getElementById('backgroundImage');
+      this.x = 0;
+      this.y = 0;
+      this.width = 2400;
+      this.height = 720;
+      this.speed = 1;
+    }
+    draw(context) {
+      context.drawImage(this.image, this.x, this.y, this.width, this.height);
+      context.drawImage(
+        this.image,
+        this.x + this.width - this.speed, // account for scrolling speed when setting x of second image
+        this.y,
+        this.width,
+        this.height
+      ); // draw second image to the right of the first one
+    }
+    update() {
+      this.x -= this.speed;
+      if (this.x < -this.width) this.x = 0; // if it's off screen then reset to 0
+    }
+  }
 
-  class Enemy {}
+  class Enemy {
+    constructor(gameWidth, gameHeight) {
+      this.gameWidth = gameWidth;
+      this.gameHeight = gameHeight;
+      this.image = document.getElementById('enemyImage');
+      this.width = 160;
+      this.height = 119;
+      this.x = this.gameWidth; // start off screen to the right
+      this.y = this.gameHeight - this.height; // bottom boundary
+      this.frameX = 0; // start at first frame
+      this.maxFrameX = 5; // number of frames in spritesheet horizontally
+      this.fps = 20; // frames per second
+      this.frameTimer = 0; // frame timer
+      this.frameInterval = 1000 / this.fps; // frame interval
+      this.speed = 8; // speed of enemy
+      this.toBeDeleted = false; // if enemy is to be deleted then set to true
+    }
 
-  function handleEnemies() {}
+    draw(context) {
+      context.drawImage(
+        this.image,
+        this.frameX * this.width, // source x
+        0, // source y (always 0 because there's only one row)
+        this.width, // source width
+        this.height, // source height
+        this.x, // destination x
+        this.y, // destination y
+        this.width, // destination width
+        this.height // destination height
+      );
+    }
+    update(deltaTime) {
+      if (this.frameTimer > this.frameInterval) {
+        if (this.frameX >= this.maxFrameX)
+          this.frameX = 0; // reset to first frame
+        else this.frameX++; // increment to next frame
+        this.frameTimer = 0; // reset frame timer
+      } else this.frameTimer += deltaTime; // add time to frame timer
+      this.x -= this.speed;
+
+      if (this.x < -this.width) this.toBeDeleted = true; // if off screen then delete
+    }
+  }
+  function handleEnemies(deltaTime) {
+    if (enemyTimer > enemyInterval + randomEnemyInterval) {
+      enemies.push(new Enemy(canvas.width, canvas.height));
+      enemyTimer = 0;
+    } else {
+      enemyTimer += deltaTime;
+    }
+    enemies.forEach((enemy) => {
+      enemy.draw(ctx);
+      enemy.update(deltaTime);
+    });
+    enemies = enemies.filter((enemy) => !enemy.toBeDeleted);
+  }
 
   function displayStatusText() {}
 
   const input = new InputHandler();
   const player = new Player(canvas.width, canvas.height);
+  const background = new Background(canvas.width, canvas.height);
 
-  function animate() {
+  let lastTime = 0;
+  let enemyTimer = 0;
+  let enemyInterval = 1000; // milliseconds between enemy spawns
+  const randomEnemyInterval = Math.random() * 1000 + 500;
+
+  function animate(timeStamp) {
+    const deltaTime = timeStamp - lastTime;
+    lastTime = timeStamp;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    background.draw(ctx);
+    background.update();
     player.draw(ctx);
-    player.update(input);
+    player.update(input, deltaTime);
+    handleEnemies(deltaTime);
     requestAnimationFrame(animate);
   }
 
-  animate();
+  animate(0);
 });
