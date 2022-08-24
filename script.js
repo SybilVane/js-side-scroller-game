@@ -12,7 +12,9 @@ window.addEventListener('load', () => {
       this.keys = new Set();
       this.touchY = '';
       this.touchX = '';
-      this.touchThreshold = 30;
+      this.touchThresholdY = 30;
+      this.touchThresholdX = 15;
+
       window.addEventListener('keydown', (e) => {
         if (
           e.key === 'ArrowDown' ||
@@ -42,22 +44,22 @@ window.addEventListener('load', () => {
         const swipeDistanceY = e.changedTouches[0].pageY - this.touchY;
         const swipeDistanceX = e.changedTouches[0].pageX - this.touchX;
         if (
-          swipeDistanceX < -this.touchThreshold &&
+          swipeDistanceX < -this.touchThresholdX &&
           !this.keys.has('swipe left')
         )
           this.keys.add('swipe left');
         else if (
-          swipeDistanceX > this.touchThreshold &&
+          swipeDistanceX > this.touchThresholdX &&
           !this.keys.has('swipe right')
         )
           this.keys.add('swipe right');
         else if (
-          swipeDistanceY < -this.touchThreshold &&
+          swipeDistanceY < -this.touchThresholdY &&
           !this.keys.has('swipe up')
         )
           this.keys.add('swipe up');
         else if (
-          swipeDistanceY > this.touchThreshold &&
+          swipeDistanceY > this.touchThresholdY &&
           !this.keys.has('swipe down')
         ) {
           this.keys.add('swipe down');
