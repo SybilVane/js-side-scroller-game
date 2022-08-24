@@ -10,14 +10,20 @@ window.addEventListener('load', () => {
   class InputHandler {
     constructor() {
       this.keys = new Set();
+      this.touchY = '';
+      this.touchX = '';
+      this.touchThreshold = 30;
       window.addEventListener('keydown', (e) => {
         if (
           e.key === 'ArrowDown' ||
           e.key === 'ArrowUp' ||
           e.key === 'ArrowLeft' ||
           e.key === 'ArrowRight'
-        )
+        ) {
           this.keys.add(e.key);
+        } else if (e.key === 'Enter' && gameOver) {
+          restartGame();
+        }
       });
       window.addEventListener('keyup', (e) => {
         if (
@@ -27,6 +33,42 @@ window.addEventListener('load', () => {
           (e.key === 'ArrowRight' && this.keys.has(e.key))
         )
           this.keys.delete(e.key);
+      });
+      window.addEventListener('touchstart', (e) => {
+        this.touchY = e.changedTouches[0].pageY;
+        this.touchX = e.changedTouches[0].pageX;
+      });
+      window.addEventListener('touchmove', (e) => {
+        const swipeDistanceY = e.changedTouches[0].pageY - this.touchY;
+        const swipeDistanceX = e.changedTouches[0].pageX - this.touchX;
+        if (
+          swipeDistanceX < -this.touchThreshold &&
+          !this.keys.has('swipe left')
+        )
+          this.keys.add('swipe left');
+        else if (
+          swipeDistanceX > this.touchThreshold &&
+          !this.keys.has('swipe right')
+        )
+          this.keys.add('swipe right');
+        else if (
+          swipeDistanceY < -this.touchThreshold &&
+          !this.keys.has('swipe up')
+        )
+          this.keys.add('swipe up');
+        else if (
+          swipeDistanceY > this.touchThreshold &&
+          !this.keys.has('swipe down')
+        ) {
+          this.keys.add('swipe down');
+          if (gameOver) restartGame();
+        }
+      });
+      window.addEventListener('touchend', (e) => {
+        this.keys.delete('swipe up');
+        this.keys.delete('swipe down');
+        this.keys.delete('swipe left');
+        this.keys.delete('swipe right');
       });
     }
   }
@@ -54,7 +96,7 @@ gameWidth - this.width
       this.image = document.getElementById('playerImage');
       this.width = 200; // width of player
       this.height = 200; // height of player
-      this.x = 0; // x position of player
+      this.x = 20; // x position of player
       this.y = gameHeight - this.height; // y position of player
       this.frameX = 0; // frame position from spritesheet horizontally
       this.frameY = 0; // frame position from spritesheet vertically
@@ -65,6 +107,12 @@ gameWidth - this.width
       this.speed = 0; // horizontal speed of player
       this.vy = 0; // vertical speed of player
       this.weight = 1; // weight of player
+    }
+    restart() {
+      this.x = 20;
+      this.y = this.gameHeight - this.height;
+      this.maxFrame = 8;
+      this.frameY = 0;
     }
 
     draw(context) {
@@ -99,18 +147,16 @@ gameWidth - this.width
       } else this.frameTimer += deltaTime;
 
       // controls
-
-      if (input.keys.has('ArrowRight')) this.speed = 5;
-      else if (input.keys.has('ArrowLeft')) this.speed = -5;
-      else if (input.keys.has('ArrowUp') && this.onGround()) this.vy -= 32;
-      else if (
-        input.keys.has('ArrowRight') &&
-        input.keys.has('ArrowUp') &&
-        this.onGround()
-      ) {
+      if (input.keys.has('ArrowRight') || input.keys.has('swipe right'))
         this.speed = 5;
+      else if (input.keys.has('ArrowLeft') || input.keys.has('swipe left'))
+        this.speed = -5;
+      else if (
+        (input.keys.has('ArrowUp') || input.keys.has('swipe up')) &&
+        this.onGround()
+      )
         this.vy -= 32;
-      } else this.speed = 0;
+      else this.speed = 0;
 
       this.x += this.speed; // move player horizontally
       if (this.x < 0) this.x = 0; // left boundary
@@ -162,6 +208,9 @@ gameWidth - this.width
     update() {
       this.x -= this.speed;
       if (this.x < -this.width) this.x = 0; // if it's off screen then reset to 0
+    }
+    restart() {
+      this.x = 0;
     }
   }
 
@@ -226,6 +275,7 @@ gameWidth - this.width
   }
 
   function displayStatusText(context) {
+    context.textAlign = 'left';
     context.fillStyle = 'white';
     context.font = '40px Courier New';
     context.fillText(`Score ${score}`, 20, 40);
@@ -234,14 +284,36 @@ gameWidth - this.width
       context.textAlign = 'center';
       context.fillStyle = 'black';
       context.font = '50px Courier New';
-      context.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
+      context.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2 - 25);
       context.fillStyle = 'white';
       context.fillText(
         'GAME OVER!',
         canvas.width / 2 + 2,
-        canvas.height / 2 + 2
+        canvas.height / 2 + 2 - 25
+      );
+      context.fillStyle = 'black';
+      context.font = '40px Courier New';
+      context.fillText(
+        'Press enter or swipe down...',
+        canvas.width / 2,
+        canvas.height / 2 + 25
+      );
+      context.fillStyle = 'white';
+      context.fillText(
+        'Press enter or swipe down...',
+        canvas.width / 2 + 2,
+        canvas.height / 2 + 2 + 25
       );
     }
+  }
+
+  function restartGame() {
+    player.restart();
+    background.restart();
+    enemies = [];
+    score = 0;
+    gameOver = false;
+    animate(0);
   }
 
   const input = new InputHandler();
