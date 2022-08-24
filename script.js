@@ -4,6 +4,8 @@ window.addEventListener('load', () => {
   canvas.width = 800;
   canvas.height = 720;
   let enemies = [];
+  let score = 0;
+  let gameOver = false;
 
   class InputHandler {
     constructor() {
@@ -78,7 +80,17 @@ gameWidth - this.width
         this.height // destination height
       );
     }
-    update(input, deltaTime) {
+    update(input, deltaTime, enemies) {
+      // collision detection between player and enemies
+      enemies.forEach((enemy) => {
+        const dx = enemy.x + enemy.width / 2 - (this.x + this.width / 2);
+        const dy = enemy.y + enemy.height / 2 - (this.y + this.height / 2);
+        const distance = Math.sqrt(dx * dx + dy * dy) + 20; // distance between centers of circles (hypotenuse)
+        if (distance < enemy.width / 2 + this.width / 2) {
+          gameOver = true;
+        }
+      });
+
       // sprite animation
       if (this.frameTimer > this.frameInterval) {
         if (this.frameX >= this.maxFrame) this.frameX = 0;
@@ -87,10 +99,18 @@ gameWidth - this.width
       } else this.frameTimer += deltaTime;
 
       // controls
+
       if (input.keys.has('ArrowRight')) this.speed = 5;
       else if (input.keys.has('ArrowLeft')) this.speed = -5;
       else if (input.keys.has('ArrowUp') && this.onGround()) this.vy -= 32;
-      else this.speed = 0;
+      else if (
+        input.keys.has('ArrowRight') &&
+        input.keys.has('ArrowUp') &&
+        this.onGround()
+      ) {
+        this.speed = 5;
+        this.vy -= 32;
+      } else this.speed = 0;
 
       this.x += this.speed; // move player horizontally
       if (this.x < 0) this.x = 0; // left boundary
@@ -185,7 +205,10 @@ gameWidth - this.width
       } else this.frameTimer += deltaTime; // add time to frame timer
       this.x -= this.speed;
 
-      if (this.x < -this.width) this.toBeDeleted = true; // if off screen then delete
+      if (this.x < -this.width) {
+        this.toBeDeleted = true; // if off screen then delete
+        score++;
+      }
     }
   }
   function handleEnemies(deltaTime) {
@@ -202,7 +225,24 @@ gameWidth - this.width
     enemies = enemies.filter((enemy) => !enemy.toBeDeleted);
   }
 
-  function displayStatusText() {}
+  function displayStatusText(context) {
+    context.fillStyle = 'white';
+    context.font = '40px Courier New';
+    context.fillText(`Score ${score}`, 20, 40);
+
+    if (gameOver) {
+      context.textAlign = 'center';
+      context.fillStyle = 'black';
+      context.font = '50px Courier New';
+      context.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
+      context.fillStyle = 'white';
+      context.fillText(
+        'GAME OVER!',
+        canvas.width / 2 + 2,
+        canvas.height / 2 + 2
+      );
+    }
+  }
 
   const input = new InputHandler();
   const player = new Player(canvas.width, canvas.height);
@@ -221,9 +261,10 @@ gameWidth - this.width
     background.draw(ctx);
     background.update();
     player.draw(ctx);
-    player.update(input, deltaTime);
+    player.update(input, deltaTime, enemies);
     handleEnemies(deltaTime);
-    requestAnimationFrame(animate);
+    displayStatusText(ctx);
+    if (!gameOver) requestAnimationFrame(animate);
   }
 
   animate(0);
