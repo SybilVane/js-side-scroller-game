@@ -66,7 +66,7 @@ window.addEventListener('load', () => {
           if (gameOver) restartGame();
         }
       });
-      window.addEventListener('touchend', (e) => {
+      window.addEventListener('touchend', () => {
         this.keys.delete('swipe up');
         this.keys.delete('swipe down');
         this.keys.delete('swipe left');
@@ -187,9 +187,7 @@ gameWidth - this.width
   }
 
   class Background {
-    constructor(gameWidth, gameHeight) {
-      this.gameWidth = gameWidth;
-      this.gameHeight = gameHeight;
+    constructor() {
       this.image = document.getElementById('backgroundImage');
       this.x = 0;
       this.y = 0;
